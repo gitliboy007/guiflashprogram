@@ -103,10 +103,9 @@ def get_ethernet_ip():
         for snic in snics:
             if snic.family == socket.AF_INET:
                 print("Interface: ", interface, "Address: ", snic.address)
-            if snic.family == socket.AF_INET and '以太网 2' in interface:
+            if snic.family == socket.AF_INET and '以太网' in interface:
                 return snic.address
-            if snic.family == socket.AF_INET and 'Ethernet' in interface:
-                
+            if snic.family == socket.AF_INET and 'Ethernet' in interface:                
                 return snic.address
 
 ethernet_ip = get_ethernet_ip()
@@ -138,20 +137,6 @@ def recv_data():
 
 t = threading.Thread(target = recv_data, daemon=True)
 t.start()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -225,6 +210,8 @@ def Udp_burn1():
     file_path = entry.get()
     if not file_path:
         print("No file selected.")
+        global is_udp_burn_running
+        is_udp_burn_running = False
         return
 
 
@@ -295,9 +282,19 @@ def Udp_burn1():
     file1.close()
     # sys.exit()
     # sock1.close()
+    # global is_udp_burn_running
+    is_udp_burn_running = False
 
 
 def Udp_burn():
+    global is_udp_burn_running
+    if is_udp_burn_running:
+        print("udp_burn is already running.")
+        return
+    is_udp_burn_running = True
+
+
+
     # 创建一个线程对象，目标函数是Udp_burn
     udp_burn_thread = threading.Thread(target=Udp_burn1, daemon=True)
 
@@ -306,7 +303,7 @@ def Udp_burn():
     # （可选）如果你需要在主线程中等待这个线程完成，可以取消注释下面的行
     # udp_burn_thread.join()
 
-
+is_udp_burn_running = False
 
 
 
@@ -432,7 +429,7 @@ root = tk.Tk()
 # 设置窗口大小
 root.geometry("700x512")
 # 设置窗口标题
-root.title("Flash Program")
+root.title("Flash Program Ver 1.0")
 file_path = tk.StringVar()
 
 # 设置输入控件的长度为70
