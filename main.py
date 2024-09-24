@@ -166,10 +166,10 @@ def open_serial():
         print(f"Failed to open serial port {port}.")
 
 def scan_serial():
-    # 获取可用的串口列�?
+    # 获取可用的串口列�??
     ports = serial.tools.list_ports.comports()
     port_names = [port.device for port in ports]
-    combo_var.set(port_names[0] if port_names else "请检查串口连�?")
+    combo_var.set(port_names[0] if port_names else "请检查串口连�??")
     combo = tk.OptionMenu(root, combo_var, *port_names)
     print(f"Scanning serial port {port_names}...")
 
@@ -224,23 +224,23 @@ def Udp_burn1():
     # time.sleep(22)
     for i in range(1, 23):
         
-        print(f"等待 {23-i} 秒")  # 使用f-string进行字符串格式化
+        print(f"等待 {23-i} �?")  # 使用f-string进行字符串格式化
         time.sleep(1)
-        # 获取总行数
+        # 获取总行�?
         total_lines = int(output_text.index('end-1c').split('.')[0])
         
-        # 删除最后一行
+        # 删除最后一�?
         output_text.delete(f"{total_lines-1}.0", f"{total_lines}.end")
 
     sock.sendto(data3.encode("utf-8"),(MCAST_ADDR,MCAST_PORT))  #erase
     print("send  Erase command! waiting 3s!!!")
     for i in range(1, 4):
-        print(f"等待 {4-i} 秒")  # 使用f-string进行字符串格式化
+        print(f"等待 {4-i} �?")  # 使用f-string进行字符串格式化
         time.sleep(1)
-        # 获取总行数
+        # 获取总行�?
         total_lines = int(output_text.index('end-1c').split('.')[0])
         
-        # 删除最后一行
+        # 删除最后一�?
         output_text.delete(f"{total_lines-1}.0", f"{total_lines}.end")
 
     while True:
@@ -300,10 +300,127 @@ def Udp_burn():
 
     # 启动线程
     udp_burn_thread.start()
-    # （可选）如果你需要在主线程中等待这个线程完成，可以取消注释下面的行
+    # （可选）如果你需要在主线程中等待这个线程完成，可以取消注释下面的�?
     # udp_burn_thread.join()
 
 is_udp_burn_running = False
+
+
+
+
+def Tcp_burn1():
+    num = 1
+   
+    global a, data2, data3, data4  # 声明要使用的全局变量
+    data2 = "Reset"
+    data3 = "Erase"
+    data4 = "SendOver"
+    a = "b"
+    file_path = entry.get()
+    if not file_path:
+        print("No file selected.")
+        global is_tcp_burn_running
+        is_tcp_burn_running = False
+        return
+
+
+    # file1 = open("LWIP_MULTICAST.bin","rb")
+    file1 = open(file_path,"rb")
+    sock.sendto(data2.encode("utf-8"),(MCAST_ADDR,MCAST_PORT))
+
+    print("send  reset command! waiting 22s!!!")
+    
+    # time.sleep(22)
+    for i in range(1, 23):
+        
+        print(f"等待 {23-i} �?")  # 使用f-string进行字符串格式化
+        time.sleep(1)
+        # 获取总行�?
+        total_lines = int(output_text.index('end-1c').split('.')[0])
+        
+        # 删除最后一�?
+        output_text.delete(f"{total_lines-1}.0", f"{total_lines}.end")
+
+    sock.sendto(data3.encode("utf-8"),(MCAST_ADDR,MCAST_PORT))  #erase
+    print("send  Erase command! waiting 3s!!!")
+    for i in range(1, 4):
+        print(f"等待 {4-i} �?")  # 使用f-string进行字符串格式化
+        time.sleep(1)
+        # 获取总行�?
+        total_lines = int(output_text.index('end-1c').split('.')[0])
+        
+        # 删除最后一�?
+        output_text.delete(f"{total_lines-1}.0", f"{total_lines}.end")
+
+    while True:
+        # data,address = sock.recvfrom(1024)
+        # print(address)
+        # print(data)
+
+
+        #data1 = "hello,this is a multicast message!"
+        data1 = file1.read(512)
+        # file1.seek(0,0)
+        if not data1:       
+            sock.sendto(data4.encode("utf-8"),(MCAST_ADDR,MCAST_PORT))
+            print("send  end!!!")
+            break
+        # print(data1)
+        data1 = a.encode() + num.to_bytes(4,"big") + data1
+        
+        # print("%d",num)
+        sock.sendto(data1,(MCAST_ADDR,MCAST_PORT))
+        # sock1.sendto(data1, (MCAST_ADDR1, MCAST_PORT1))
+
+        print(f"send to {MCAST_ADDR }:{MCAST_PORT} at {time.strftime('%Y-%m-%d %H %M %S',time.localtime())}--{num}")
+        num += 1
+        time.sleep(0.2)
+    num = 0
+    while True:
+        data2 = "hello,this is a multicast message!"
+        sock.sendto(data2.encode(), (MCAST_ADDR, MCAST_PORT))
+        num+=1
+        if num > 20:
+            break
+        time.sleep(0.5)
+
+    stop_thread = True
+    t.join()  
+    sock.close()
+    print("send  over!!!")
+    file1.close()
+    # sys.exit()
+    # sock1.close()
+    # global is_tcp_burn_running
+    is_tcp_burn_running = False
+
+
+
+
+def Tcp_burn():
+    global is_tcp_burn_running
+    if is_tcp_burn_running:
+        print("tcp_burn is already running.")
+        return
+    is_tcp_burn_running = True
+
+
+
+    # 创建一个线程对象，目标函数是tcp_burn
+    tcp_burn_thread = threading.Thread(target=Tcp_burn1, daemon=True)
+
+    # 启动线程
+    tcp_burn_thread.start()
+    # （可选）如果你需要在主线程中等待这个线程完成，可以取消注释下面的�?
+    # tcp_burn_thread.join()
+
+is_tcp_burn_running = False
+
+
+
+
+
+
 
 
 
@@ -346,7 +463,7 @@ def burn_file():
 
 
 
-    # 获取要发送的文件的路�?
+    # 获取要发送的文件的路�??
     file_path = entry.get()
     if not file_path:
         print("No file selected.")
@@ -374,7 +491,7 @@ def burn_file():
     # serial_io.write(b'\x19')  # 发送Ctrl+X，进入YModem模式
     # serial_io.write(b'\x17')  # 发送Ctrl+X，进入YModem模式
     # serial_io.write(b'\x16')  # 发送Ctrl+X，进入YModem模式
-    # print(f"Serial recv {serial_io.read(1)} ")   # 读取YModem的应�?
+    # print(f"Serial recv {serial_io.read(1)} ")   # 读取YModem的应�??
 
     # socket_args = {
     #     'packet_size':  1024,
@@ -442,25 +559,25 @@ output_text = tk.Text(root, height=30, width=95)
 output_text.grid(row=2, column=0, columnspan=4, sticky='ew')
 
 
-# 获取可用的串口列�?
+# 获取可用的串口列�??
 ports = serial.tools.list_ports.comports()
 port_names = [port.device for port in ports]
 
-# 创建下拉列表�?
-# 创建下拉列表框，设置默认值为串口列表的第一�?
+# 创建下拉列表�??
+# 创建下拉列表框，设置默认值为串口列表的第一�??
 combo_var = tk.StringVar()
-combo_var.set(port_names[0] if port_names else "请检查串口连�?")
+combo_var.set(port_names[0] if port_names else "请检查串口连�??")
 combo = tk.OptionMenu(root, combo_var, *port_names)
 # combo = tk.OptionMenu(root, tk.StringVar(), *port_names)
 # 使用grid方法将下拉列表框放置在窗体的左边
 combo.grid(row=1, column=0,sticky='w')
 
 scan_serial_button = tk.Button(root, text="Scan Serial", command=scan_serial)
-# 使用grid方法将按钮放置在下拉列表框的右侧，距�?100像素
+# 使用grid方法将按钮放置在下拉列表框的右侧，距�??100像素
 scan_serial_button.grid(row=1, column=0,sticky='e', padx=(0, 320))
 
 open_serial_button = tk.Button(root, text="Open Serial", command=open_serial)
-# 使用grid方法将按钮放置在下拉列表框的右侧，距�?100像素
+# 使用grid方法将按钮放置在下拉列表框的右侧，距�??100像素
 open_serial_button.grid(row=1, column=0,sticky='e', padx=(0, 210))
 
 open_button = tk.Button(root, text="Open File", command=open_file)
@@ -471,6 +588,9 @@ burn_button.grid(row=0, column=3)
 
 burn_button = tk.Button(root, text="UDPBurn File", command=Udp_burn)
 burn_button.grid(row=1, column=3)
+
+burn_button = tk.Button(root, text="TCPBurn File", command=Tcp_burn)
+burn_button.grid(row=1, column=2)
 
 output_text.insert(tk.END, f"Ethernet IP: {ethernet_ip}")
 # 绑定关闭事件
