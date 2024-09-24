@@ -32,15 +32,15 @@ MCAST_PORT1 = 65001
 
 # 分隔符和缓冲区大小
 SEPARATOR = "<SEPARATOR>"
-BUFFER_SIZE = 4096
+BUFFER_SIZE = 2048  # 1024 bytes to keep things simple  4096
 
 # 服务器的 IP 地址和端口
 # host = "服务器的IP地址"
-host = "192.168.0.11"
+host = ""
 port = 5001
 
-
-
+s = None  # 定义全局套接字变量
+is_tcp_burn_running = False  # 定义全局变量，用于指示是否正在进行TCP烧录
 
 
 
@@ -71,13 +71,13 @@ ANY = "0.0.0.0"
 
 
 global file_path
+global a
+global ip_address
 
-
-
-
+ip_address = ''
 file_path = ''
 serial_io = serial.Serial(baudrate= 115200,bytesize=8, parity='N', stopbits=1, timeout=3)
-
+a = 0
 
 
 class TaskProgressBar:
@@ -326,13 +326,54 @@ def Udp_burn():
 
 is_udp_burn_running = False
 
+def link_server1(host, port, max_retries=5):
+    # 创建 TCP 套接字
+    global s  # 声明 s 为全局变量
+    s = socket.socket()
+    retry_count = 0
 
+    while retry_count < max_retries:
+        try:
+            print(f"[+] 连接到 {host}:{port}")
+            s.connect((host, port))
+            print("[+] 连接成功")
+            return s  # 成功连接后返回套接字
+        except socket.error as e:
+            print(f"连接失败: {e}")
+            retry_count += 1
+            print(f"重试 {retry_count}/{max_retries} 次...")
+            time.sleep(2)  # 等待一段时间后重试
 
+    print("[-] 无法连接到服务器")
+    return None  # 如果超过最大重试次数，返回 None
+
+def link_server():  
+    global a
+    # host = "192.168.1.100"
+    host = entryip.get()
+    if not host:
+        print("+ No ip_address input. please input ip_address.")
+        global is_tcp_burn_running
+        is_tcp_burn_running = False
+        a = 0
+        return
+    if a:
+        print("link_server is already running.")
+        return
+    socket = link_server1(host, port)
+    if socket:
+        # 继续进行数据传输等操作
+        a = 1
+        pass
+    else:
+        # 处理连接失败的情况
+        a = 0
+        pass
 
 def Tcp_burn1():
     num = 1
    
-    global a, data2, data3, data4  # 声明要使用的全局变量
+    global a, data2, data3, data4 ,s # 声明要使用的全局变量
     data2 = "Reset"
     data3 = "Erase"
     data4 = "SendOver"
@@ -351,12 +392,6 @@ def Tcp_burn1():
     filename = file_path
     filesize = os.path.getsize(filename)
     
-    # 创建 TCP 套接字
-    s = socket.socket()
-
-    print(f"[+] 连接到 {host}:{port}")
-    s.connect((host, port))
-    print("[+] 连接成功")
 
     s.send(f"{filename}{SEPARATOR}{filesize}".encode())
 
@@ -383,6 +418,7 @@ def Tcp_burn1():
     stop_thread1 = True
     #t.join()  
     s.close()
+    a = 0
     #print("send  over!!!")
     file1.close()
     # sys.exit()
@@ -400,7 +436,10 @@ def Tcp_burn():
         return
     is_tcp_burn_running = True
 
-
+    if not a:
+        print("eathrnet is not connected please connect first")
+        is_tcp_burn_running = False
+        return
 
     # 创建一个线程对象，目标函数是tcp_burn
     tcp_burn_thread = threading.Thread(target=Tcp_burn1, daemon=True)
@@ -550,6 +589,8 @@ entry = tk.Entry(root, textvariable=file_path, width=70)
 entry.grid(row=0, column=0, padx=(0, 20))
 
 
+
+
 # 创建一个Text控件
 output_text = tk.Text(root, height=30, width=95)
 output_text.grid(row=2, column=0, columnspan=4, sticky='ew')
@@ -576,17 +617,24 @@ open_serial_button = tk.Button(root, text="Open Serial", command=open_serial)
 # 使用grid方法将按钮放置在下拉列表框的右侧，距�??100像素
 open_serial_button.grid(row=1, column=0,sticky='e', padx=(0, 210))
 
+entryip = tk.Entry(root, textvariable=ip_address, width=15)
+entryip.grid(row=1, column=0,sticky='e', padx=(0, 80))
+
+burn_button = tk.Button(root, text="link server", command=link_server)
+burn_button.grid(row=1, column=0,sticky='e', padx=(0, 0))
+
+
 open_button = tk.Button(root, text="Open File", command=open_file)
 open_button.grid(row=0, column=2, padx=(0, 20))
 
 burn_button = tk.Button(root, text="ComBurn File", command=burn_file)
 burn_button.grid(row=0, column=3)
 
-burn_button = tk.Button(root, text="UDPBurn File", command=Udp_burn)
-burn_button.grid(row=1, column=3)
+burn_button1 = tk.Button(root, text="UDPBurn File", command=Udp_burn)
+burn_button1.grid(row=1, column=3)
 
-burn_button = tk.Button(root, text="TCPBurn File", command=Tcp_burn)
-burn_button.grid(row=1, column=2)
+burn_button2 = tk.Button(root, text="TCPBurn File", command=Tcp_burn)
+burn_button2.grid(row=1, column=2)
 
 output_text.insert(tk.END, f"Ethernet IP: {ethernet_ip}")
 # 绑定关闭事件
