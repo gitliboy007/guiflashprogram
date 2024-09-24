@@ -21,13 +21,28 @@ import time
 import struct
 import psutil
 import sys
-
+import os
 
 MCAST_ADDR = "224.1.1.1"
 MCAST_PORT = 65000
 
 MCAST_ADDR1 = "224.1.1.0"
 MCAST_PORT1 = 65001
+
+
+# 分隔符和缓冲区大小
+SEPARATOR = "<SEPARATOR>"
+BUFFER_SIZE = 4096
+
+# 服务器的 IP 地址和端口
+# host = "服务器的IP地址"
+host = "192.168.0.11"
+port = 5001
+
+
+
+
+
 
 
 INTERFACE_IP = '192.168.0.12'  
@@ -110,6 +125,12 @@ def get_ethernet_ip():
 
 ethernet_ip = get_ethernet_ip()
 print("Ethernet IP: ", ethernet_ip)
+
+
+
+
+
+
 
 
 sock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM,socket.IPPROTO_UDP)
@@ -326,68 +347,43 @@ def Tcp_burn1():
 
     # file1 = open("LWIP_MULTICAST.bin","rb")
     file1 = open(file_path,"rb")
-    sock.sendto(data2.encode("utf-8"),(MCAST_ADDR,MCAST_PORT))
-
-    print("send  reset command! waiting 22s!!!")
+    # 要发送的文件
+    filename = file_path
+    filesize = os.path.getsize(filename)
     
-    # time.sleep(22)
-    for i in range(1, 23):
-        
-        print(f"等待 {23-i} �?")  # 使用f-string进行字符串格式化
-        time.sleep(1)
-        # 获取总行�?
-        total_lines = int(output_text.index('end-1c').split('.')[0])
-        
-        # 删除最后一�?
-        output_text.delete(f"{total_lines-1}.0", f"{total_lines}.end")
+    # 创建 TCP 套接字
+    s = socket.socket()
 
-    sock.sendto(data3.encode("utf-8"),(MCAST_ADDR,MCAST_PORT))  #erase
-    print("send  Erase command! waiting 3s!!!")
-    for i in range(1, 4):
-        print(f"等待 {4-i} �?")  # 使用f-string进行字符串格式化
-        time.sleep(1)
-        # 获取总行�?
-        total_lines = int(output_text.index('end-1c').split('.')[0])
-        
-        # 删除最后一�?
-        output_text.delete(f"{total_lines-1}.0", f"{total_lines}.end")
+    print(f"[+] 连接到 {host}:{port}")
+    s.connect((host, port))
+    print("[+] 连接成功")
 
-    while True:
-        # data,address = sock.recvfrom(1024)
-        # print(address)
-        # print(data)
+    s.send(f"{filename}{SEPARATOR}{filesize}".encode())
 
+    # 发送文件内容
+    with open(filename, "rb") as f:
+        while True:
+            # 读取文件中的数据
+            bytes_read = f.read(BUFFER_SIZE)
+            if not bytes_read:
+                break
+            # 发送数据
+            try:
+                s.sendall(bytes_read)
+            except socket.error as e:
+                print(f"发送数据时出错: {e}")
+                s.close()
+                file1.close()
+                is_tcp_burn_running = False
+                break
 
-        #data1 = "hello,this is a multicast message!"
-        data1 = file1.read(512)
-        # file1.seek(0,0)
-        if not data1:       
-            sock.sendto(data4.encode("utf-8"),(MCAST_ADDR,MCAST_PORT))
-            print("send  end!!!")
-            break
-        # print(data1)
-        data1 = a.encode() + num.to_bytes(4,"big") + data1
-        
-        # print("%d",num)
-        sock.sendto(data1,(MCAST_ADDR,MCAST_PORT))
-        # sock1.sendto(data1, (MCAST_ADDR1, MCAST_PORT1))
+    # 关闭套接字
 
-        print(f"send to {MCAST_ADDR }:{MCAST_PORT} at {time.strftime('%Y-%m-%d %H %M %S',time.localtime())}--{num}")
-        num += 1
-        time.sleep(0.2)
-    num = 0
-    while True:
-        data2 = "hello,this is a multicast message!"
-        sock.sendto(data2.encode(), (MCAST_ADDR, MCAST_PORT))
-        num+=1
-        if num > 20:
-            break
-        time.sleep(0.5)
-
-    stop_thread = True
-    t.join()  
-    sock.close()
-    print("send  over!!!")
+    print("[+] 发送完成！")
+    stop_thread1 = True
+    #t.join()  
+    s.close()
+    #print("send  over!!!")
     file1.close()
     # sys.exit()
     # sock1.close()
